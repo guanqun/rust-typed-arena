@@ -288,6 +288,58 @@ fn iter_mut_high_capacity() {
     assert_eq!(None, iter.next());
 }
 
+#[test]
+fn iter_low_capacity() {
+    #[derive(Debug, PartialEq, Eq)]
+    struct NonCopy(usize);
+
+    const MAX: usize = 1_000;
+    const CAP: usize = 16;
+
+    let arena = Arena::with_capacity(CAP);
+    for i in 1..MAX {
+        arena.alloc(NonCopy(i));
+    }
+
+    assert!(
+        arena.chunks.borrow().rest.len() > 1,
+        "expected multiple chunks"
+    );
+
+    let mut iter = arena.iter();
+    for i in 1..MAX {
+        assert_eq!(Some(&NonCopy(i)), iter.next());
+    }
+
+    assert_eq!(None, iter.next());
+}
+
+#[test]
+fn iter_high_capacity() {
+    #[derive(Debug, PartialEq, Eq)]
+    struct NonCopy(usize);
+
+    const MAX: usize = 1_000;
+    const CAP: usize = 8192;
+
+    let arena = Arena::with_capacity(CAP);
+    for i in 1..MAX {
+        arena.alloc(NonCopy(i));
+    }
+
+    assert!(
+        arena.chunks.borrow().rest.is_empty(),
+        "expected single chunk"
+    );
+
+    let mut iter = arena.iter();
+    for i in 1..MAX {
+        assert_eq!(Some(&NonCopy(i)), iter.next());
+    }
+
+    assert_eq!(None, iter.next());
+}
+
 fn assert_size_hint<T>(arena_len: usize, iter: IterMut<'_, T>) {
     let (min, max) = iter.size_hint();
 
